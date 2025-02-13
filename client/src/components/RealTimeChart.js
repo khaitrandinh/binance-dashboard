@@ -26,7 +26,7 @@ const RealTimeChart = () => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("📩 Dữ liệu nhận được:", data);
+        // console.log("📩 Dữ liệu nhận được:", data);
 
         setChartData((prev) => [
           ...prev.slice(-20),

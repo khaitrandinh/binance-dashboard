@@ -7,7 +7,7 @@ const CandlestickSchema = new mongoose.Schema({
   low: { type: Number, required: true },
   close: { type: Number, required: true },
   volume: { type: Number, required: true },
-  timestamp: { type: Date, required: true, unique: true },
+  timestamp: { type: Date, required: true, unique: true, index: true } // ✅ Thêm index
 });
 
 const Candlestick = mongoose.model("Candlestick", CandlestickSchema);

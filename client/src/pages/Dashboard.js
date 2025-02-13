@@ -11,12 +11,12 @@ const Dashboard = () => {
       {/* Section 1: Dữ liệu Realtime */}
       <h1 className="text-3xl font-bold">📡 Dữ liệu Realtime</h1>
       <MarketTable />
-      <RealTimeChart />
+      {/* <RealTimeChart /> */}
 
       {/* Section 2: Dữ liệu History */}
       <h1 className="text-3xl font-bold mt-6">📊 Dữ liệu History</h1>
       <StackedBarChart />
-      <HeatmapChart />
+      {/* <HeatmapChart /> */}
       <TradeBarChart />
 
     </div>
