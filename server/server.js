@@ -64,10 +64,7 @@ wss.on("connection", (ws) => {
 });
 
 // 🔹 Kết nối WebSocket với Binance API và xử lý dữ liệu
-const binanceWS = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
-
-let candleData = null;
-let lastCandleTimestamp = null;
+let binanceWS = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
 
 binanceWS.on("open", () => {
   console.log("✅ Kết nối WebSocket Binance thành công!");
@@ -79,69 +76,41 @@ binanceWS.on("error", (error) => {
 
 // 🔹 Xử lý dữ liệu từ Binance WebSocket
 binanceWS.on("message", async (data) => {
+  const trade = JSON.parse(data);
+  const currentPrice = parseFloat(trade.p);
+  const volume = parseFloat(trade.q);
+  const timestamp = new Date(trade.T);
+  const minuteTimestamp = new Date(timestamp.setSeconds(0, 0)); // Cắt xuống phút gần nhất
+
   try {
-    const trade = JSON.parse(data);
-    const currentPrice = parseFloat(trade.p);
-    const volume = parseFloat(trade.q);
-    const timestamp = new Date(trade.T);
-    const minuteTimestamp = new Date(timestamp.setSeconds(0, 0));
-
-    // 🔸 Lưu dữ liệu giá real-time vào MongoDB
-    const newPrice = {
-      symbol: "BTCUSDT",
-      price: currentPrice,
-      volume: volume,
-    };
-
-    await Price.create(newPrice);
-    console.log("✅ Dữ liệu giá đã lưu vào MongoDB:", newPrice);
-
-    // 🔸 Xử lý dữ liệu nến
-    if (!candleData || minuteTimestamp > lastCandleTimestamp) {
-      if (candleData) {
-        await Candlestick.create(candleData);
-        console.log("✅ Lưu nến vào MongoDB:", candleData);
+    // ✅ Sử dụng bulkWrite để giảm số lần gọi DB
+    await Candlestick.bulkWrite([
+      {
+        updateOne: {
+          filter: { timestamp: minuteTimestamp },
+          update: {
+            $max: { high: currentPrice },
+            $min: { low: currentPrice },
+            $set: { close: currentPrice },
+            $inc: { volume: volume }
+          },
+          upsert: true  // Nếu không tìm thấy, sẽ tạo mới
+        }
       }
+    ]);
 
-      candleData = {
-        symbol: "BTCUSDT",
-        open: currentPrice,
-        high: currentPrice,
-        low: currentPrice,
-        close: currentPrice,
-        volume: volume,
-        timestamp: minuteTimestamp,
-      };
-      lastCandleTimestamp = minuteTimestamp;
-    } else {
-      candleData.high = Math.max(candleData.high, currentPrice);
-      candleData.low = Math.min(candleData.low, currentPrice);
-      candleData.close = currentPrice;
-      candleData.volume += volume;
-    }
-
-    // 🔸 Lưu dữ liệu giao dịch vào MongoDB
-    const newTrade = new Trade({
-      symbol: trade.s,
-      price: currentPrice,
-      volume: volume,
-      type: trade.m ? "sell" : "buy",
-      timestamp: timestamp,
-    });
-
-    await newTrade.save();
-    console.log("✅ Trade đã lưu vào MongoDB:", newTrade);
-
-    // 🔸 Gửi dữ liệu real-time đến client
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ price: currentPrice, candle: candleData, trade: newTrade }));
-      }
-    });
-  } catch (error) {
-    console.error("❌ Lỗi xử lý dữ liệu Binance:", error);
+    // console.log("✅ Cập nhật hoặc lưu nến vào MongoDB:", {
+    //   timestamp: minuteTimestamp,
+    //   price: currentPrice,
+    //   volume: volume,
+    // });
+  } catch (err) {
+    console.error("❌ Lỗi khi lưu hoặc cập nhật nến:", err);
   }
 });
+
+
+
 
 // 🔹 Xử lý mất kết nối và tự động reconnect
 binanceWS.on("close", () => {
