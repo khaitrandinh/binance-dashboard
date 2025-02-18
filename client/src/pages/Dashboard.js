@@ -10,13 +10,13 @@ const Dashboard = () => {
     <div className="p-6">
       {/* Section 1: Dữ liệu Realtime */}
       <h1 className="text-3xl font-bold">📡 Dữ liệu Realtime</h1>
-      <MarketTable />
+      {/* <MarketTable /> */}
       {/* <RealTimeChart /> */}
 
       {/* Section 2: Dữ liệu History */}
       <h1 className="text-3xl font-bold mt-6">📊 Dữ liệu History</h1>
-      <StackedBarChart />
-      {/* <HeatmapChart /> */}
+      {/* <StackedBarChart /> */}
+      <HeatmapChart />
       <TradeBarChart />
 
     </div>
@@ -24,3 +24,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+ 

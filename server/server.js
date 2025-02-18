@@ -3,15 +3,13 @@ const cors = require("cors");
 const connectDB = require("./database");
 require("dotenv").config();
 const WebSocket = require("ws");
-
-const Price = require("./models/PriceModel");
 const Candlestick = require("./models/CandlestickModel");
-const Trade = require("./models/tradeModel");
 
 const priceRoutes = require("./routes/priceRoutes");
 const candlestickRoutes = require("./routes/candlestickRoutes");
 const tradeRoutes = require("./routes/tradeRoutes");
 const marketRoutes = require("./routes/market");
+const heatmapRoutes = require("./routes/heatmapRoutes");
 
 // 🔹 Khởi tạo Express Server
 const app = express();
@@ -20,6 +18,7 @@ app.use(express.json());
 
 // 🔹 Kết nối MongoDB
 connectDB();
+
 
 // 🔹 Test API
 app.get("/", (req, res) => {
@@ -32,6 +31,8 @@ app.use("/api/market", marketRoutes);  // Đảm bảo đã đăng ký route
 app.use("/api/price", priceRoutes);
 app.use("/api/candles", candlestickRoutes);
 app.use("/api/trades", tradeRoutes);
+app.use("/api/heatmap", heatmapRoutes);
+
 
 // 🔹 Khởi động server Express
 const PORT = process.env.PORT || 5000;
@@ -108,8 +109,6 @@ binanceWS.on("message", async (data) => {
     console.error("❌ Lỗi khi lưu hoặc cập nhật nến:", err);
   }
 });
-
-
 
 
 // 🔹 Xử lý mất kết nối và tự động reconnect

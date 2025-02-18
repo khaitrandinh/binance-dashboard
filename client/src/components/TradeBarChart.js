@@ -1,22 +1,34 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  ComposedChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ResponsiveContainer, Line
+  ComposedChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Line,
 } from "recharts";
 
 const TradeBarChart = () => {
   const [tradeData, setTradeData] = useState([]);
-  const [timeframe, setTimeframe] = useState("day");  // Mặc định chọn theo ngày
-  const [startDate, setStartDate] = useState("");  // Ngày bắt đầu
-  const [endDate, setEndDate] = useState("");      // Ngày kết thúc
+  const [timeframe, setTimeframe] = useState("day"); // Mặc định chọn ngày
+  const [startDate, setStartDate] = useState(""); // Ngày bắt đầu
+  const [endDate, setEndDate] = useState(""); // Ngày kết thúc
+  const [loading, setLoading] = useState(false); // Trạng thái tải dữ liệu
 
   // 🔹 **Hàm lấy dữ liệu từ API**
-  const fetchData = () => {
+  const fetchData = async () => {
+    setLoading(true);
     let apiUrl = `http://localhost:5000/api/trades/trade-volume/${timeframe}`;
-    
+
+    // 📌 Xử lý timeframe
     if (timeframe === "range") {
       if (!startDate || !endDate) {
         alert("Vui lòng chọn khoảng ngày hợp lệ!");
+        setLoading(false);
         return;
       }
       apiUrl += `?start=${startDate}&end=${endDate}`;
@@ -24,21 +36,32 @@ const TradeBarChart = () => {
       apiUrl += `/${startDate}`;
     }
 
-    axios.get(apiUrl)
-      .then((response) => {
-        console.log("📊 Dữ liệu nhận từ API:", response.data);
+    try {
+      const response = await axios.get(apiUrl);
+      console.log("📊 Dữ liệu nhận từ API:", response.data);
 
-        // Chuyển đổi key label -> priceRange để khớp với biểu đồ
-        const formattedData = response.data.map(item => ({
-          priceRange: item.label, // Chuyển label thành priceRange
-          buyVolume: item.buyVolume > 0 ? item.buyVolume : 0.1, // Đảm bảo có giá trị để hiển thị
-          sellVolume: item.sellVolume > 0 ? item.sellVolume : 0.1
-        }));
+      if (!Array.isArray(response.data) || response.data.length === 0) {
+        console.warn("🚨 API trả về dữ liệu không hợp lệ hoặc không có dữ liệu!");
+        setTradeData([]);
+        setLoading(false);
+        return;
+      }
 
-        console.log("📈 Dữ liệu sau khi xử lý:", formattedData);
-        setTradeData(formattedData);
-      })
-      .catch((error) => console.error("❌ Lỗi khi lấy trade-volume:", error));
+      // 📌 Định dạng dữ liệu cho biểu đồ
+      const formattedData = response.data.map((item) => ({
+        priceRange: item.label, // Chuyển label thành priceRange
+        buyVolume: item.buyVolume > 0 ? item.buyVolume : 0, // Không dùng giá trị mặc định 0.1
+        sellVolume: item.sellVolume > 0 ? item.sellVolume : 0,
+      }));
+
+      console.log("📈 Dữ liệu sau khi xử lý:", formattedData);
+      setTradeData(formattedData);
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy trade-volume:", error);
+      setTradeData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,7 +76,7 @@ const TradeBarChart = () => {
           value={timeframe}
           onChange={(e) => {
             setTimeframe(e.target.value);
-            setStartDate("");  // Reset ngày chọn khi đổi loại thời gian
+            setStartDate(""); // Reset ngày chọn khi đổi loại thời gian
             setEndDate("");
           }}
           className="border p-3 rounded text-lg"
@@ -95,42 +118,58 @@ const TradeBarChart = () => {
         {/* 🔹 Nút xác nhận */}
         <button
           onClick={fetchData}
-          className="bg-blue-600 text-white px-6 py-3 rounded text-lg hover:bg-blue-800"
+          className={`bg-blue-600 text-white px-6 py-3 rounded text-lg hover:bg-blue-800 ${
+            loading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+          disabled={loading}
         >
-          Lấy dữ liệu
+          {loading ? "Đang tải..." : "Lấy dữ liệu"}
         </button>
       </div>
 
       {/* 🔹 Biểu đồ cột & xu hướng */}
-      <ResponsiveContainer width="100%" height={500}>
-        <ComposedChart data={tradeData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="priceRange"
-            angle={0}
-            textAnchor="middle"
-            interval={0}
-            tick={{ fontSize: 16, fontWeight: "bold" }}
-            label={{ 
-              value: "Vùng giá BTC (USDT)", 
-              position: "bottom", 
-              offset: 50, 
-              style: { fontSize: "18px", fontWeight: "bold" }
-            }}
-          />
-          <YAxis domain={[0, "auto"]} tick={{ fontSize: 16, fontWeight: "bold" }} />
-          <Tooltip />
-          <Legend verticalAlign="top" align="right" height={40} wrapperStyle={{ fontSize: "16px" }} />
+      {tradeData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={500}>
+          <ComposedChart data={tradeData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="priceRange"
+              angle={-45} // Xoay text trục X nếu quá dài
+              textAnchor="end"
+              interval={0}
+              tick={{ fontSize: 12, fontWeight: "bold" }}
+              label={{
+                value: "Vùng giá BTC (USDT)",
+                position: "bottom",
+                offset: 50,
+                style: { fontSize: "16px", fontWeight: "bold" },
+              }}
+            />
+            <YAxis
+              domain={[0, "auto"]}
+              tick={{ fontSize: 14, fontWeight: "bold" }}
+              label={{
+                value: "Khối lượng BTC",
+                angle: -90,
+                position: "left",
+                style: { fontSize: "16px", fontWeight: "bold" },
+              }}
+            />
+            <Tooltip />
+            <Legend verticalAlign="top" align="right" height={40} wrapperStyle={{ fontSize: "14px" }} />
 
-          {/* 📌 Hiển thị cột mua/bán */}
-          <Bar dataKey="buyVolume" stackId="stack" fill="#4CAF50" name="Khối lượng mua BTC" />
-          <Bar dataKey="sellVolume" stackId="stack" fill="#F44336" name="Khối lượng bán BTC" />
+            {/* 📌 Hiển thị cột mua/bán */}
+            <Bar dataKey="buyVolume" stackId="stack" fill="#4CAF50" name="Khối lượng mua BTC" />
+            <Bar dataKey="sellVolume" stackId="stack" fill="#F44336" name="Khối lượng bán BTC" />
 
-          {/* 📌 Đường xu hướng nằm trong ComposedChart */}
-          <Line type="monotone" dataKey="buyVolume" stroke="#2196F3" strokeWidth={3} dot={{ r: 4 }} name="Xu hướng Mua" />
-          <Line type="monotone" dataKey="sellVolume" stroke="#FF5722" strokeWidth={3} dot={{ r: 4 }} name="Xu hướng Bán" />
-        </ComposedChart>
-      </ResponsiveContainer>
+            {/* 📌 Đường xu hướng */}
+            <Line type="monotone" dataKey="buyVolume" stroke="#2196F3" strokeWidth={3} dot={{ r: 4 }} name="Xu hướng Mua" />
+            <Line type="monotone" dataKey="sellVolume" stroke="#FF5722" strokeWidth={3} dot={{ r: 4 }} name="Xu hướng Bán" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-center text-red-500 font-bold mt-6">🚫 Không có dữ liệu</p>
+      )}
     </div>
   );
 };
