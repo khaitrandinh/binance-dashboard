@@ -14,25 +14,28 @@ const HeatmapChart = () => {
   const [maxBuyValue, setMaxBuyValue] = useState(1);
   const [maxSellValue, setMaxSellValue] = useState(1);
 
-  useEffect(() => {
-    fetchData();
-  }, [timeframe, selectedDate]);
+  // useEffect(() => {
+  //   fetchData();
+  // }, [timeframe, selectedDate]);
 
   const fetchData = async () => {
     try {
       let dateFormat;
-      switch (timeframe) {
-        case "month":
-          dateFormat = selectedDate.format("YYYY-MM");
-          break;
-        case "year":
-          dateFormat = selectedDate.format("YYYY");
-          break;
-        default:
-          dateFormat = selectedDate.format("YYYY-MM-DD");
+      let labels = [];
+      if (timeframe === "day") {
+        dateFormat = selectedDate.format("YYYY-MM-DD");
+        labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+      } else if (timeframe === "month") {
+        dateFormat = selectedDate.format("YYYY-MM");
+        const daysInMonth = selectedDate.daysInMonth();
+        labels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+      } else if (timeframe === "year") {
+        dateFormat = selectedDate.format("YYYY");
+        labels = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
       }
 
       const response = await axios.get(`http://localhost:5000/api/heatmap/${timeframe}/${dateFormat}`);
+      console.log(response);
 
       if (!response.data || !response.data.buyData || !response.data.sellData || !response.data.priceRanges) {
         console.warn("🚨 Không có dữ liệu hoặc dữ liệu không hợp lệ!");
@@ -42,9 +45,7 @@ const HeatmapChart = () => {
 
       const { buyData, sellData, priceRanges } = response.data;
 
-      // Tạo xLabels cho 24 giờ (trục ngang)
-      const xLabelsFull = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
-      setXLabels(xLabelsFull);
+      setXLabels(labels);
 
       // Sắp xếp priceRanges theo thứ tự giảm dần (range cao nhất hiển thị ở trên cùng)
       const sortedPriceRanges = [...priceRanges].sort((a, b) => {
@@ -54,21 +55,31 @@ const HeatmapChart = () => {
       });
       setYLabels(sortedPriceRanges);
 
-      // Hàm chuyển dữ liệu thành ma trận raw (row = priceRange, col = hour)
+      // Hàm chuyển dữ liệu thành ma trận raw (row = priceRange, col = nhóm thời gian)
       const processHeatmapData = (data) => {
-        const columns = xLabelsFull.length;
+        const columns = labels.length;
         const matrix = Array(sortedPriceRanges.length)
-          .fill()
+          .fill(null)
           .map(() => Array(columns).fill(0));
-
-        data.forEach((hourData) => {
-          const hour = hourData.hour;
+      
+        data.forEach((dataPoint) => {
+          let timeGroup;
+          if (timeframe === 'day') {
+            timeGroup = dataPoint.hour;
+          } else if (timeframe === 'month') {
+            timeGroup = dataPoint.day;  // BE trả về key 'day' cho dữ liệu theo tháng
+          } else if (timeframe === 'year') {
+            timeGroup = dataPoint.month; // BE trả về key 'month' cho dữ liệu theo năm
+          }
+          // Với day: index = timeGroup, còn với month/year (nhận về 1-indexed) thì trừ đi 1
+          const idx = timeframe === 'day' ? timeGroup : timeGroup - 1;
           sortedPriceRanges.forEach((range, rowIndex) => {
-            matrix[rowIndex][hour] = hourData[range] || 0;
+            matrix[rowIndex][idx] = dataPoint[range] || 0;
           });
         });
         return matrix;
       };
+      
 
       const rawBuyMatrix = processHeatmapData(buyData);
       const rawSellMatrix = processHeatmapData(sellData);
@@ -76,11 +87,9 @@ const HeatmapChart = () => {
       setRawBuyData(rawBuyMatrix);
       setRawSellData(rawSellMatrix);
 
-      // Tính max raw cho normalized
       const maxRawBuy = Math.max(...rawBuyMatrix.flat());
       const maxRawSell = Math.max(...rawSellMatrix.flat());
 
-      // Normalize ma trận về khoảng 0 đến 4
       const normalizeMatrix = (matrix, maxRaw) =>
         matrix.map(row =>
           row.map(val => (maxRaw > 0 ? Math.round((val / maxRaw) * 4) : 0))
@@ -108,19 +117,34 @@ const HeatmapChart = () => {
     setYLabels([]);
   };
 
-  // Hàm điều chỉnh độ đậm của màu sắc (opacity) dựa trên normalized value
+  // Hàm điều chỉnh độ đậm của màu sắc dựa trên normalized value
   const getOpacity = (value, maxValue) => {
     if (value === 0) return 0.1; 
     return Math.pow(value / maxValue, 0.8);
   };
 
-  const formatVolume = (volume) => volume > 0 ? volume.toFixed(1) : "";
-
-  // Các style chung cho bảng
   const tableClass = "w-full border-collapse min-w-[800px]";
   const thClass = "p-2 border border-gray-300 text-sm bg-gray-100";
   const tdClass = "p-2 border border-gray-300 text-center text-sm h-[50px] w-[70px]";
   const labelTdClass = "p-2 border border-gray-300 font-medium text-sm min-w-[150px] text-right";
+
+  // Xử lý thay đổi timeframe
+  const handleTimeframeChange = (e) => {
+    setTimeframe(e.target.value);
+    setSelectedDate(dayjs());
+  };
+
+  // Xử lý thay đổi input ngày/tháng/năm tùy theo timeframe
+  const handleDateChange = (e) => {
+    const value = e.target.value;
+    if (timeframe === 'year') {
+      setSelectedDate(dayjs(value, "YYYY"));
+    } else if (timeframe === 'month') {
+      setSelectedDate(dayjs(value, "YYYY-MM"));
+    } else {
+      setSelectedDate(dayjs(value, "YYYY-MM-DD"));
+    }
+  };
 
   return (
     <div className="w-full max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-lg">
@@ -131,7 +155,7 @@ const HeatmapChart = () => {
       <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
         <select
           value={timeframe}
-          onChange={(e) => setTimeframe(e.target.value)}
+          onChange={handleTimeframeChange}
           className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="day">Ngày</option>
@@ -139,12 +163,34 @@ const HeatmapChart = () => {
           <option value="year">Năm</option>
         </select>
 
-        <input
-          type="date"
-          value={selectedDate.format('YYYY-MM-DD')}
-          onChange={(e) => setSelectedDate(dayjs(e.target.value))}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        {timeframe === "day" && (
+          <input
+            type="date"
+            value={selectedDate.format('YYYY-MM-DD')}
+            onChange={handleDateChange}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
+
+        {timeframe === "month" && (
+          <input
+            type="month"
+            value={selectedDate.format('YYYY-MM')}
+            onChange={handleDateChange}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
+
+        {timeframe === "year" && (
+          <input
+            type="number"
+            value={selectedDate.format('YYYY')}
+            onChange={handleDateChange}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            min="2009"
+            max={dayjs().format('YYYY')}
+          />
+        )}
 
         <button 
           onClick={fetchData}
