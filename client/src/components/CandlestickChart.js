@@ -8,7 +8,7 @@ const CandlestickChart = ({ symbol }) => {
   useEffect(() => {
     const fetchCandles = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/candles/history/${symbol}`);
+        const response = await axios.get(`http://localhost:5000/api/candles/history/BTCUSDT`);
         console.log("📩 Dữ liệu nến nhận được:", response.data);
         setCandlestickData(response.data.reverse());
       } catch (error) {

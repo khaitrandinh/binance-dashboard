@@ -1,64 +1,98 @@
 import React, { useState } from "react";
+import "./Dashboard.css"; // Đảm bảo file này nằm trong thư mục styles hoặc đúng đường dẫn
 import MarketTable from "../components/MarketTable";
 import RealTimeChart from "../components/RealTimeChart";
 import TradeBarChart from "../components/TradeBarChart";
 import HeatmapChart from "../components/HeatmapChart";
+import CandlestickChart from "../components/CandlestickChart";
 import StackedBarChart from "../components/StackedBarChart";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("realtime");
 
-  const NavButton = ({ id, icon, text }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`flex items-center space-x-3 px-4 py-2 w-full text-left rounded-lg transition-colors
-        ${activeTab === id ? "bg-blue-500 text-white" : "hover:bg-blue-100 text-gray-700"}`}
-    >
-      <span className="text-lg">{icon}</span>
-      <span className="text-base">{text}</span>
-    </button>
-  );
-
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md p-6">
-        <h2 className="text-xl font-bold mb-6">Dashboard</h2>
-        <nav className="space-y-4">
-          <NavButton id="realtime" icon="📡" text="Dữ liệu Realtime" />
-          <NavButton id="history" icon="📊" text="Dữ liệu History" />
-          {/* Thêm các chức năng khác nếu cần */}
-        </nav>
+    <div className="app-wrapper">
+      {/* Sidebar nằm bên trái */}
+      <aside className="sidebar">
+        <div className="logo-container">
+          {/* Sử dụng đường dẫn từ public: */}
+          <img src="/images.png" alt="Logo" className="logo" /> DASHBOARD
+        </div>
+        <div className="sidebar-section-title">Dashboard</div>
+        <ul className="sidebar-menu">
+          <li 
+            className={`sidebar-menu-item ${activeTab === "realtime" ? "active" : ""}`}
+            onClick={() => setActiveTab("realtime")}
+          >
+            <i className="icon">📊</i>
+            <span>RealTime</span>
+          </li>
+          <li 
+            className={`sidebar-menu-item ${activeTab === "history" ? "active" : ""}`}
+            onClick={() => setActiveTab("history")}
+          >
+            <i className="icon">👥</i>
+            <span>History</span>
+          </li>
+        </ul>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-grow p-6">
-        {activeTab === "realtime" && (
-          <div className="space-y-8">
-            <h1 className="text-3xl font-bold mb-4">📡 Dữ liệu Realtime</h1>
-            <div className="bg-white rounded-lg shadow p-6">
-              <MarketTable />
+      {/* Main Content nằm bên phải */}
+      <main className="main-content">
+        {/* Header */}
+        <header className="header">
+          <div className="header-top">
+            <h1 className="page-title">Performance Report</h1>
+          </div>
+        </header>
+
+        {/* Metrics Row */}
+        <div className="metrics-row">
+          <div className="metric-card">
+            <div className="metric-card-content">
+              <div>
+                <div className="metric-value">BTCUSDT</div>
+                <div className="metric-label">
+                  <MarketTable />
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
+          </div>
+          {/* Có thể thêm các metric card khác */}
+        </div>
+
+        {/* Charts */}
+        {activeTab === "realtime" && (
+          <div className="charts-container">
+            <div className="chart-container full-width">
               <RealTimeChart />
+            </div>
+            <div className="chart-container full-width">
+              {/* <CandlestickChart /> */}
             </div>
           </div>
         )}
 
         {activeTab === "history" && (
-          <div className="space-y-8">
-            <h1 className="text-3xl font-bold mb-4">📊 Dữ liệu History</h1>
-            <div className="bg-white rounded-lg shadow p-6">
+          <div className="charts-container">
+            <div className="charts-row">
+              <div className="chart-container">
+                <TradeBarChart />
+              </div>
+              <div className="chart-container">
+                <HeatmapChart />
+              </div>
+            </div>
+            <div className="chart-container full-width">
               <StackedBarChart />
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <HeatmapChart />
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <TradeBarChart />
             </div>
           </div>
         )}
+
+        {/* Footer */}
+        <footer className="footer">
+          {/* Footer content nếu cần */}
+        </footer>
       </main>
     </div>
   );

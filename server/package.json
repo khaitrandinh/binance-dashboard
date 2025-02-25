@@ -19,5 +19,8 @@
     "ioredis": "^5.5.0",
     "mongoose": "^8.10.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5"
   }
 }
