@@ -65,7 +65,7 @@ const Dashboard = () => {
         {activeTab === "realtime" && (
           <div className="charts-container">
             <div className="chart-container full-width">
-              <RealTimeChart />
+              <CandlestickChart />
             </div>
             <div className="chart-container full-width">
               {/* <CandlestickChart /> */}

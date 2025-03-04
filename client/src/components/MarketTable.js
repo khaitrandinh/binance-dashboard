@@ -13,7 +13,7 @@ const MarketTable = () => {
         setIsLoading(true);
         // Thêm tham số để tránh cache
         const response = await axios.get(`http://localhost:5000/api/market/real-time/BTCUSDT?_=${new Date().getTime()}`);
-        console.log("API response:", response.data); // Log để debug
+        // console.log("API response:", response.data); 
         setMarketData([response.data]); // Lưu vào state
         setLastUpdated(new Date());
         setIsLoading(false);
