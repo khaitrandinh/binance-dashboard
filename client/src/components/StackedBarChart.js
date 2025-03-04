@@ -59,7 +59,7 @@ const StackedBarChart = () => {
           <Tooltip />
           <Legend />
           <Bar dataKey="buyVolume" fill="#4caf50" barSize={10} name="Khối lượng mua" />
-          <Line type="monotone" dataKey="buyVolume" stroke="#2e7d32" strokeWidth={2} dot={false} name="Xu hướng mua" />
+          <Line type="monotone" dataKey="buyVolume" stroke="#2e7d32" strokeWidth={2} dot={{ r: 2 }} name="Xu hướng mua" />
         </ComposedChart>
       </ResponsiveContainer>
 
@@ -73,7 +73,7 @@ const StackedBarChart = () => {
           <Tooltip />
           <Legend />
           <Bar dataKey="sellVolume" fill="#f44336" barSize={10} name="Khối lượng bán" />
-          <Line type="monotone" dataKey="sellVolume" stroke="#d32f2f" strokeWidth={2} dot={false} name="Xu hướng bán" />
+          <Line type="monotone" dataKey="sellVolume" stroke="#d32f2f" strokeWidth={2} dot={{ r: 2 }} name="Xu hướng bán" />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
